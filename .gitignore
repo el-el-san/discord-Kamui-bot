@@ -1,0 +1,5 @@
+.env
+CLAUDE.md
+node_modules/
+.claude/
+dependency-analyzer.js

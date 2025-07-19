@@ -1,0 +1,28 @@
+{
+  "name": "discord-kamui",
+  "version": "1.0.0",
+  "description": "Discord bot that integrates with Claude Code SDK",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"No linter configured\""
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "claude",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^8.15.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
