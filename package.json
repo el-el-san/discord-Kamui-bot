@@ -1,23 +1,26 @@
 {
-  "name": "discord-kamui",
+  "name": "kamui-multiplatform-bot",
   "version": "1.0.0",
-  "description": "Discord bot that integrates with Claude Code SDK",
-  "main": "bot.js",
+  "description": "Multi-platform bot (Discord & Slack) that integrates with Claude Code SDK",
+  "main": "src/bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "node --watch bot.js",
+    "start": "node src/bot.js",
+    "dev": "node --watch src/bot.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"No linter configured\""
   },
   "keywords": [
     "discord",
+    "slack",
     "bot",
+    "multi-platform",
     "claude",
     "ai"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@slack/bolt": "^3.17.1",
     "acorn": "^8.15.0",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.7"

@@ -1,10 +1,33 @@
 require('dotenv').config();
 
 module.exports = {
+  // プラットフォーム選択
+  platform: process.env.BOT_PLATFORM || 'discord', // 'discord' or 'slack' or 'both'
+  
   discord: {
     token: process.env.DISCORD_BOT_TOKEN,
-    prefix: process.env.PREFIX || '!',
-    botName: process.env.BOT_NAME || 'Kamui'
+    clientId: process.env.DISCORD_CLIENT_ID,
+    prefix: process.env.DISCORD_PREFIX || '!',
+    botName: process.env.DISCORD_BOT_NAME || 'Kamui',
+    limits: {
+      messageLength: 2000,
+      fileSize: 25 * 1024 * 1024, // 25MB
+      fileCount: 10
+    }
+  },
+  
+  slack: {
+    botToken: process.env.SLACK_BOT_TOKEN,
+    appToken: process.env.SLACK_APP_TOKEN,
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+    socketMode: process.env.SLACK_SOCKET_MODE === 'true',
+    port: parseInt(process.env.SLACK_PORT) || 3000,
+    botName: process.env.SLACK_BOT_NAME || 'Kamui',
+    limits: {
+      messageLength: 4000,
+      fileSize: 1024 * 1024 * 1024, // 1GB
+      fileCount: 20
+    }
   },
   claude: {
     timeout: parseInt(process.env.CLAUDE_TIMEOUT) || 180000, // MCP処理用に3分に延長
