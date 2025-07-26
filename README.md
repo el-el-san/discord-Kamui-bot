@@ -156,7 +156,11 @@ FILE_DETECTION_MINUTES=30
 | `LOG_LEVEL` | - | `info` | ログレベル（debug、info、warn、error） |
 | `FILE_DETECTION_MINUTES` | - | `30` | ファイル検出時間制限（分、0以下で無制限） |
 
-### 4. プラットフォームごとのセットアップ
+### 4. KAMUI CODE のセットアップ
+`.mcp.json` を作成して KAMUI CODE記述 を追記
+
+
+### 5. プラットフォームごとのセットアップ
 
 #### Discord Bot の作成
 
