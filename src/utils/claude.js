@@ -222,7 +222,7 @@ class ClaudeProcessor {
           streamBuffer = lines.pop() || '';
           
           for (const line of lines) {
-            if (line.trim() && !line.includes('\x00') && line.length < 50000) {
+            if (line.trim() && !line.includes('\x00') && line.length < (parseInt(process.env.MAX_LINE_LENGTH) || 50000)) {
               if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
                 try {
                   const json = JSON.parse(line);
@@ -295,7 +295,7 @@ class ClaudeProcessor {
       }
       
       // タイムアウト処理 (MCP操作用に延長)
-      const mcpTimeout = allowedTools.includes('mcp__') ? 180000 : 60000; // MCPツール使用時は3分、通常は1分
+      const mcpTimeout = allowedTools.includes('mcp__') ? (parseInt(process.env.MCP_TOOL_TIMEOUT) || 180000) : (parseInt(process.env.DEFAULT_TOOL_TIMEOUT) || 60000); // MCPツール使用時とデフォルトタイムアウト
       console.log(`[DEBUG] Setting timeout to ${mcpTimeout}ms for allowedTools: ${allowedTools.substring(0, 50)}...`);
       
       let processKilled = false;
@@ -411,7 +411,7 @@ class ClaudeProcessor {
             'User-Agent': 'Kamui-Bot/1.0',
             ...options.headers
           },
-          timeout: options.timeout || 30000
+          timeout: options.timeout || (parseInt(process.env.DEFAULT_TOOL_TIMEOUT) || 30000)
         };
         
         console.log(`[HTTP] Executing ${requestOptions.method} ${url}`);
@@ -503,7 +503,7 @@ Content-Type: ${response.headers['content-type'] || 'unknown'}
 Content-Length: ${sanitizedBody.length} bytes
 
 Response Body:
-${sanitizedBody.length > 2000 ? sanitizedBody.substring(0, 2000) + '\n... (truncated)' : sanitizedBody}
+${sanitizedBody.length > (parseInt(process.env.MAX_BODY_LOG_LENGTH) || 2000) ? sanitizedBody.substring(0, parseInt(process.env.MAX_BODY_LOG_LENGTH) || 2000) + '\n... (truncated)' : sanitizedBody}
 [End of HTTP Response]
 
 `;
@@ -650,7 +650,7 @@ ${processedInput}`;
         processedLines++;
         
         // バイナリデータや非JSONデータをスキップ
-        if (!line.trim() || line.includes('\x00') || line.length > 50000) {
+        if (!line.trim() || line.includes('\x00') || line.length > (parseInt(process.env.MAX_LINE_LENGTH) || 50000)) {
           continue;
         }
         

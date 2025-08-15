@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Events, AttachmentBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Events, AttachmentBuilder, REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const BaseBotAdapter = require('./base-adapter');
 const MessageHandler = require('../handlers/message-handler');
 
@@ -92,9 +92,13 @@ class DiscordBotAdapter extends BaseBotAdapter {
       await this.messageHandler.handleMessage(normalizedMessage, context);
     });
 
-    // スラッシュコマンドイベント
+    // スラッシュコマンドとボタンイベント
     this.client.on(Events.InteractionCreate, async (interaction) => {
-      await this.handleInteraction(interaction);
+      if (interaction.isChatInputCommand()) {
+        await this.handleInteraction(interaction);
+      } else if (interaction.isButton()) {
+        await this.handleButtonInteraction(interaction);
+      }
     });
 
     // エラーハンドリング
@@ -152,6 +156,37 @@ class DiscordBotAdapter extends BaseBotAdapter {
   }
 
   /**
+   * インタラクティブボタンを作成
+   * @param {string} lastResponse - Claudeの最後の応答
+   * @returns {ActionRowBuilder} アクションロー
+   */
+  createActionButtons(lastResponse = '') {
+    const row = new ActionRowBuilder();
+
+    // 1. リセットボタン
+    const resetButton = new ButtonBuilder()
+      .setCustomId('reset_conversation')
+      .setLabel('RESET')
+      .setStyle(ButtonStyle.Secondary);
+
+    // 2. ダウンロードボタン  
+    const downloadButton = new ButtonBuilder()
+      .setCustomId('download_file')
+      .setLabel('DL')
+      .setStyle(ButtonStyle.Primary);
+
+    // 3. チェックボタン
+    const checkButton = new ButtonBuilder()
+      .setCustomId('check_status')
+      .setLabel('CHECK')
+      .setStyle(ButtonStyle.Success);
+
+    row.addComponents(resetButton, downloadButton, checkButton);
+    return row;
+  }
+
+
+  /**
    * Discordにメッセージ送信
    * @param {Object} context - Discord固有のコンテキスト
    * @param {string} message - 送信するメッセージ
@@ -159,18 +194,28 @@ class DiscordBotAdapter extends BaseBotAdapter {
   async sendMessage(context, message) {
     try {
       this.log('info', `Attempting to send message: "${message.substring(0, 100)}..."`);
+      
+      // ボタンコンポーネントを作成
+      const actionRow = this.createActionButtons(message);
+      const messageContent = {
+        content: message,
+        components: [actionRow]
+      };
+      
       const discordMessage = context.originalMessage;
       if (context.interaction) {
         // スラッシュコマンドの場合
         this.log('info', 'Using interaction.editReply for slash command');
-        await context.interaction.editReply(message);
+        await context.interaction.editReply(messageContent);
         this.log('info', 'interaction.editReply completed successfully');
       } else {
         // 通常のメッセージの場合
         this.log('info', 'Using message.reply for regular message');
-        await discordMessage.reply(message);
+        await discordMessage.reply(messageContent);
         this.log('info', 'message.reply completed successfully');
       }
+      
+      
     } catch (error) {
       this.log('error', 'Failed to send message:', error);
       throw error;
@@ -209,6 +254,7 @@ class DiscordBotAdapter extends BaseBotAdapter {
     }
   }
 
+
   /**
    * Discordにエラーメッセージ送信
    * @param {Object} context - Discord固有のコンテキスト
@@ -221,6 +267,106 @@ class DiscordBotAdapter extends BaseBotAdapter {
       await this.sendMessage(context, errorMessage);
     } catch (sendError) {
       this.log('error', 'Failed to send error message:', sendError);
+    }
+  }
+
+  /**
+   * ボタンインタラクション処理
+   * @param {Interaction} interaction - Discordボタンインタラクション
+   */
+  async handleButtonInteraction(interaction) {
+    try {
+      const { customId } = interaction;
+      this.log('info', `ボタンクリック: ${customId} by ${interaction.user.tag}`);
+
+      await interaction.deferReply();
+
+      switch (customId) {
+        case 'reset_conversation': {
+          // リセット機能 - /resetと同じ
+          const success = await this.resetConversation();
+          const message = success 
+            ? '🔄 会話履歴をリセットしました。新しい会話を開始します。'
+            : '🔄 会話履歴をリセットしました。新しい会話を開始します。';
+          await interaction.editReply(message);
+          break;
+        }
+
+        case 'download_file': {
+          // ダウンロード機能 - 指定curlコマンドのメッセージを送信
+          const downloadMessage = '指定のcurlでダウンロード';
+          
+          // MessageHandlerを使用して処理
+          const normalizedMessage = {
+            content: downloadMessage,
+            author: {
+              id: interaction.user.id,
+              username: interaction.user.username,
+              displayName: interaction.user.displayName || interaction.user.username
+            },
+            channel: {
+              id: interaction.channelId,
+              name: interaction.channel?.name,
+              type: interaction.channel?.type
+            },
+            isBot: false,
+            isSystem: false,
+            hasPrefix: false,
+            isDM: false,
+            isMentioned: false,
+            isButtonClick: true,
+            timestamp: Date.now(),
+            attachments: []
+          };
+
+          const context = { originalMessage: null, interaction, platform: 'discord' };
+          
+          this.log('info', 'Processing download request via messageHandler...');
+          await this.messageHandler.handleMessage(normalizedMessage, context);
+          break;
+        }
+
+        case 'check_status': {
+          // 状況確認機能 - 「状況確認」メッセージと同じ処理
+          const checkMessage = '状況確認';
+          
+          // MessageHandlerを使用して処理
+          const normalizedMessage = {
+            content: checkMessage,
+            author: {
+              id: interaction.user.id,
+              username: interaction.user.username,
+              displayName: interaction.user.displayName || interaction.user.username
+            },
+            channel: {
+              id: interaction.channelId,
+              name: interaction.channel?.name,
+              type: interaction.channel?.type
+            },
+            isBot: false,
+            isSystem: false,
+            hasPrefix: false,
+            isDM: false,
+            isMentioned: false,
+            isButtonClick: true,
+            timestamp: Date.now(),
+            attachments: []
+          };
+
+          const context = { originalMessage: null, interaction, platform: 'discord' };
+          
+          this.log('info', 'Processing status check request via messageHandler...');
+          await this.messageHandler.handleMessage(normalizedMessage, context);
+          break;
+        }
+
+        default:
+          await interaction.editReply('❌ 不明なボタンです。');
+      }
+
+    } catch (error) {
+      this.log('error', 'ボタンインタラクション処理エラー:', error);
+      await this.sendInteractionErrorResponse(interaction, error);
     }
   }
 

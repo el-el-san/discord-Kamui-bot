@@ -32,11 +32,12 @@ class MessageHandler {
         return;
       }
 
-      this.adapter.log('info', `受信: ${normalizedMessage.author.username} - "${cleanInput}"`);
+      const username = normalizedMessage.author?.username || normalizedMessage.userName || normalizedMessage.userId || 'User';
+      this.adapter.log('info', `受信: ${username} - "${cleanInput}"`);
 
       // 特別なコマンド処理
       this.adapter.log('info', '[DEBUG] Checking special commands');
-      if (await this.handleSpecialCommands(cleanInput, context)) {
+      if (await this.handleSpecialCommands(cleanInput, normalizedMessage)) {
         this.adapter.log('info', '[DEBUG] Handled as special command, returning');
         return;
       }
@@ -47,7 +48,7 @@ class MessageHandler {
       const response = await Promise.race([
         this.adapter.processWithClaude(cleanInput, true),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Claude processing timeout after 185 seconds')), 185000)
+          setTimeout(() => reject(new Error('Claude processing timeout after 185 seconds')), parseInt(process.env.CLAUDE_PROCESS_TIMEOUT) || 185000)
         )
       ]);
       this.adapter.log('info', 'Claude response received:', response ? `${response.length} chars` : 'empty');
@@ -65,7 +66,7 @@ class MessageHandler {
       // 生成されたファイルの検索と添付
       try {
         this.adapter.log('info', 'Checking for generated files...');
-        await this.attachGeneratedFiles(context);
+        await this.attachGeneratedFiles(context, response);
         this.adapter.log('info', 'File attachment check completed');
       } catch (fileError) {
         this.adapter.log('error', 'Failed to attach files:', fileError);
@@ -107,9 +108,12 @@ class MessageHandler {
     
     // スラッシュコマンドかどうかをチェック（contextに基づく）
     const isSlashCommand = normalizedMessage.isSlashCommand;
+    
+    // ボタンクリックかどうかをチェック
+    const isButtonClick = normalizedMessage.isButtonClick;
 
-    // プレフィックス付きコマンド、DM、メンション、またはスラッシュコマンドの場合のみ処理
-    return hasPrefix || isDM || isMentioned || isSlashCommand;
+    // プレフィックス付きコマンド、DM、メンション、スラッシュコマンド、またはボタンクリックの場合のみ処理
+    return hasPrefix || isDM || isMentioned || isSlashCommand || isButtonClick;
   }
 
   /**
@@ -278,17 +282,73 @@ class MessageHandler {
   }
 
   /**
+   * レスポンスからファイル名を抽出
+   * @param {string} response - Claudeからのレスポンス
+   * @returns {string[]} - 抽出されたファイル名の配列
+   */
+  extractFileNamesFromResponse(response) {
+    const fileNames = [];
+    
+    // バッククォートで囲まれたファイル名を抽出
+    const backtickPattern = /`([^`]+\.(mp4|mp3|wav|png|jpg|jpeg|gif|webp|m4a|flac|aac|ogg|mkv|avi|mov|webm|glb|gltf|obj|fbx|stl|zip))`/gi;
+    let match;
+    while ((match = backtickPattern.exec(response)) !== null) {
+      fileNames.push(match[1]);
+    }
+    
+    // 「ファイル」や「として保存」の後のファイル名パターンも抽出
+    const savePattern = /(?:ファイル|file|保存|saved?)\s*[:：]?\s*([^\s,、。]+\.(mp4|mp3|wav|png|jpg|jpeg|gif|webp|m4a|flac|aac|ogg|mkv|avi|mov|webm|glb|gltf|obj|fbx|stl|zip))/gi;
+    while ((match = savePattern.exec(response)) !== null) {
+      if (!fileNames.includes(match[1])) {
+        fileNames.push(match[1]);
+      }
+    }
+    
+    return fileNames;
+  }
+
+  /**
    * 生成されたファイルを検索してプラットフォームに添付
    * @param {Object} context - プラットフォーム固有のコンテキスト
+   * @param {string} response - Claudeからのレスポンス（ファイル名を抽出するため）
    */
-  async attachGeneratedFiles(context) {
+  async attachGeneratedFiles(context, response = '') {
     try {
       const FileProcessor = require('./file-processor');
-      const recentFiles = FileProcessor.findRecentFiles();
+      let recentFiles = FileProcessor.findRecentFiles();
+      
+      this.adapter.log('debug', `Found ${recentFiles.length} recent files`);
+      if (recentFiles.length > 0) {
+        this.adapter.log('debug', `Recent files: ${recentFiles.map(f => f.name).join(', ')}`);
+      }
+      
+      // レスポンスからファイル名を抽出して、関連するファイルのみをフィルタリング
+      if (response && recentFiles.length > 0) {
+        const mentionedFiles = this.extractFileNamesFromResponse(response);
+        if (mentionedFiles.length > 0) {
+          this.adapter.log('debug', `Files mentioned in response: ${mentionedFiles.join(', ')}`);
+          
+          // レスポンスで言及されたファイルを優先
+          const filteredFiles = recentFiles.filter(file => 
+            mentionedFiles.some(mentioned => file.name.includes(mentioned) || mentioned.includes(file.name))
+          );
+          
+          if (filteredFiles.length > 0) {
+            recentFiles = filteredFiles;
+            this.adapter.log('debug', `Filtered to mentioned files: ${recentFiles.map(f => f.name).join(', ')}`);
+          }
+        }
+      }
       
       if (recentFiles.length > 0) {
         const limits = this.adapter.getPlatformLimits();
-        const validFiles = recentFiles.filter(file => file.size <= limits.fileSize);
+        this.adapter.log('debug', `Platform limits: ${JSON.stringify(limits)}`);
+        const validFiles = recentFiles.filter(file => {
+          this.adapter.log('debug', `File ${file.name}: size=${file.size}, limit=${limits.maxFileSize || limits.fileSize}`);
+          return file.size <= (limits.maxFileSize || limits.fileSize);
+        });
+        
+        this.adapter.log('debug', `Valid files after size filter: ${validFiles.length}`);
         
         if (validFiles.length > 0) {
           this.adapter.log('info', `Attaching ${validFiles.length} generated files`);
@@ -299,9 +359,16 @@ class MessageHandler {
           
           await this.adapter.sendFiles(context, validFiles, message);
           
-          // 送信完了後、ローカルファイルを削除
-          await FileProcessor.deleteUploadedFiles(validFiles);
+          // LINEアダプターの場合はファイル削除をスキップ（アダプター側で管理）
+          if (this.adapter.constructor.name !== 'LineBotAdapter') {
+            // 送信完了後、ローカルファイルを削除
+            await FileProcessor.deleteUploadedFiles(validFiles);
+          }
+        } else {
+          this.adapter.log('debug', 'No valid files after size filtering');
         }
+      } else {
+        this.adapter.log('debug', 'No recent files found');
       }
     } catch (error) {
       this.adapter.log('error', 'File attachment error:', error);

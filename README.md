@@ -1,21 +1,23 @@
 # Kamui Multi-Platform Bot
 
-Kamui Code と統合したマルチプラットフォーム対応ボット。**Discord と Slack の両方**に対応し、AI会話、マルチメディア生成（画像・動画・音楽・3D）、コード実行などのタスクを各プラットフォーム上で実行できます。
+Kamui Code と統合したマルチプラットフォーム対応ボット。**Discord、Slack、LINE の3つのプラットフォーム**に対応し、AI会話、マルチメディア生成（画像・動画・音楽・3D）、コード実行などのタスクを各プラットフォーム上で実行できます。
 
 ## 🚀 主要機能
 
 ### 💬 マルチプラットフォーム対応
-- **Discord**: メッセージ、メンション、DM、スラッシュコマンド対応
-- **Slack**: メッセージ、メンション、DM、Socket Mode対応  
-- **同時実行**: 両プラットフォームで同時にボット実行可能
+- **Discord**: メッセージ、メンション、DM、スラッシュコマンド、ボタンUI対応
+- **Slack**: メッセージ、メンション、DM、Socket Mode、スラッシュコマンド対応  
+- **LINE**: メッセージ、Webhook、固定URL対応（Cloudflare Named Tunnel）
+- **同時実行**: 複数プラットフォームで同時にボット実行可能
 - 長いメッセージの自動分割配信（各プラットフォームの制限に対応）
 - 会話履歴の継続とリセット機能
 
 ### 🧠 Claude Code SDK 統合
-- Claude Code SDK の全機能を Discord・Slack で利用可能
+- Claude Code SDK の全機能を Discord・Slack・LINE で利用可能
 - ストリーミングレスポンス対応
 - コード実行・ファイル操作・Web検索などのツール利用
 - 自動タイムアウト処理とエラー回復機能
+- **環境変数による完全な設定管理**: 34個以上の詳細設定オプション
 
 ### 🎨 マルチメディア生成（MCP 20サービス対応）
 
@@ -87,7 +89,7 @@ cp .env.example .env
 # ===================================
 # PLATFORM SELECTION
 # ===================================
-# Choose which platform(s) to run: 'discord', 'slack', or 'both'
+# Choose which platform(s) to run: 'discord', 'slack', 'line', 'both', or 'all'
 BOT_PLATFORM=discord
 
 # ===================================
@@ -121,6 +123,62 @@ SLACK_PORT=3000
 SLACK_BOT_NAME=Kamui
 
 # ===================================
+# LINE CONFIGURATION
+# ===================================
+# Required for LINE bot functionality
+LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token_here
+LINE_CHANNEL_SECRET=your_line_channel_secret_here
+
+# LINE webhook server port
+LINE_WEBHOOK_PORT=3000
+
+# Optional LINE settings
+LINE_BOT_NAME=Kamui
+LINE_PUBLIC_URL=https://your-domain.com
+
+# ===================================
+# CLOUDFLARE TUNNEL CONFIGURATION
+# ===================================
+# Named tunnel configuration
+TUNNEL_NAME=el-kamui-linebot
+TUNNEL_DOMAIN=your-domain.com
+TUNNEL_NAMES=el-kamui-linebot,kamui-el-bot,el-san-kamui,kamui-el-san-bot
+
+# ===================================
+# SYSTEM CONFIGURATION
+# ===================================
+# Timeout values (milliseconds)
+TUNNEL_STARTUP_TIMEOUT=30000
+BOT_RESTART_DELAY=3000
+BOT_STARTUP_DELAY=2000
+WEBHOOK_RESPONSE_TIMEOUT=15000
+EVENT_PROCESSING_TIMEOUT=300000
+TEMP_FILE_CLEANUP_DELAY=30000
+FFMPEG_TIMEOUT=10000
+FILE_SERVE_TIMEOUT=60000
+
+# LocalTunnel configuration
+LOCALTUNNEL_SUBDOMAIN=kamui-linebot
+
+# System paths
+CLOUDFLARED_ARCH=linux-amd64
+TEMP_DIR=/tmp
+DEFAULT_VIDEO_THUMBNAIL=default_video_thumb.jpg
+
+# API endpoints
+LINE_API_HOST=api.line.me
+LINE_DEVELOPERS_URL=https://developers.line.biz/
+
+# Processing limits
+MAX_MESSAGE_LENGTH_DISCORD=2000
+MAX_MESSAGE_LENGTH_LINE=5000
+MAX_LINE_LENGTH=50000
+MAX_BODY_LOG_LENGTH=2000
+CLAUDE_PROCESS_TIMEOUT=185000
+MCP_TOOL_TIMEOUT=180000
+DEFAULT_TOOL_TIMEOUT=60000
+
+# ===================================
 # CLAUDE CODE SDK CONFIGURATION
 # ===================================
 # Timeout for Claude API calls (milliseconds)
@@ -135,32 +193,80 @@ FILE_DETECTION_MINUTES=30
 ```
 
 #### 環境変数の詳細
+
+##### 基本設定
 | 変数名 | 必須 | デフォルト値 | 説明 |
 |--------|------|-------------|------|
 | **プラットフォーム選択** ||||
-| `BOT_PLATFORM` | - | `discord` | 実行プラットフォーム: `discord`, `slack`, `both` |
-| **Discord 設定** ||||
+| `BOT_PLATFORM` | - | `discord` | 実行プラットフォーム: `discord`, `slack`, `line`, `both`, `all` |
+
+##### Discord 設定
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
 | `DISCORD_BOT_TOKEN` | Discord使用時 | - | Discord Bot のトークン |
 | `DISCORD_CLIENT_ID` | Discord使用時 | - | Discord アプリケーション ID（スラッシュコマンド用） |
 | `DISCORD_PREFIX` | - | `!` | Discord コマンドプレフィックス |
 | `DISCORD_BOT_NAME` | - | `Kamui` | Discord での Bot 表示名 |
-| **Slack 設定** ||||
+| `MAX_MESSAGE_LENGTH_DISCORD` | - | `2000` | Discordメッセージ最大長 |
+
+##### Slack 設定
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
 | `SLACK_BOT_TOKEN` | Slack使用時 | - | Slack Bot のトークン（xoxb-で始まる） |
 | `SLACK_APP_TOKEN` | Slack使用時 | - | Slack アプリトークン（xapp-で始まる、Socket Mode用） |
 | `SLACK_SIGNING_SECRET` | Slack使用時 | - | Slack 署名シークレット |
 | `SLACK_SOCKET_MODE` | - | `true` | Socket Mode の使用（true=Socket Mode、false=HTTP Mode） |
 | `SLACK_PORT` | HTTP Mode時 | `3000` | HTTP server ポート（Socket Mode=false時のみ使用） |
 | `SLACK_BOT_NAME` | - | `Kamui` | Slack での Bot 表示名 |
-| **Claude Code SDK 設定** ||||
+
+##### LINE 設定
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
+| `LINE_CHANNEL_ACCESS_TOKEN` | LINE使用時 | - | LINE Channel Access Token |
+| `LINE_CHANNEL_SECRET` | LINE使用時 | - | LINE Channel Secret |
+| `LINE_WEBHOOK_PORT` | - | `3000` | LINE Webhook サーバーポート |
+| `LINE_PUBLIC_URL` | - | - | HTTPS公開URL（固定URL使用時） |
+| `LINE_BOT_NAME` | - | `Kamui` | LINE での Bot 表示名 |
+| `MAX_MESSAGE_LENGTH_LINE` | - | `5000` | LINEメッセージ最大長 |
+| `LINE_API_HOST` | - | `api.line.me` | LINE APIホスト |
+| `LINE_DEVELOPERS_URL` | - | `https://developers.line.biz/` | LINE Developersコンソール URL |
+
+##### Cloudflare Tunnel 設定
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
+| `TUNNEL_NAME` | - | `el-kamui-linebot` | Named Tunnel名 |
+| `TUNNEL_DOMAIN` | - | - | トンネルドメイン |
+| `TUNNEL_NAMES` | - | - | 選択可能なトンネル名（カンマ区切り） |
+| `LOCALTUNNEL_SUBDOMAIN` | - | `kamui-linebot` | LocalTunnelサブドメイン |
+| `CLOUDFLARED_ARCH` | - | `linux-amd64` | cloudflaredアーキテクチャ |
+
+##### システムタイムアウト設定
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
 | `CLAUDE_TIMEOUT` | - | `180000` | Claude処理のタイムアウト（ミリ秒） |
+| `CLAUDE_PROCESS_TIMEOUT` | - | `185000` | Claude処理全体のタイムアウト |
+| `MCP_TOOL_TIMEOUT` | - | `180000` | MCPツール実行タイムアウト |
+| `DEFAULT_TOOL_TIMEOUT` | - | `60000` | デフォルトツールタイムアウト |
+| `TUNNEL_STARTUP_TIMEOUT` | - | `30000` | トンネル起動タイムアウト |
+| `BOT_RESTART_DELAY` | - | `3000` | Bot再起動待機時間 |
+| `BOT_STARTUP_DELAY` | - | `2000` | Bot起動待機時間 |
+| `WEBHOOK_RESPONSE_TIMEOUT` | - | `15000` | Webhook応答タイムアウト |
+| `EVENT_PROCESSING_TIMEOUT` | - | `300000` | イベント処理タイムアウト（5分） |
+| `TEMP_FILE_CLEANUP_DELAY` | - | `30000` | 一時ファイル削除遅延 |
+| `FFMPEG_TIMEOUT` | - | `10000` | FFmpeg変換タイムアウト |
+| `FILE_SERVE_TIMEOUT` | - | `60000` | ファイル提供タイムアウト |
+
+##### システムパスと制限
+| 変数名 | 必須 | デフォルト値 | 説明 |
+|--------|------|-------------|------|
+| `TEMP_DIR` | - | `/tmp` | 一時ファイルディレクトリ |
+| `DEFAULT_VIDEO_THUMBNAIL` | - | `default_video_thumb.jpg` | デフォルト動画サムネイル |
+| `MAX_LINE_LENGTH` | - | `50000` | 最大行長 |
+| `MAX_BODY_LOG_LENGTH` | - | `2000` | ログボディ最大長 |
 | `LOG_LEVEL` | - | `info` | ログレベル（debug、info、warn、error） |
 | `FILE_DETECTION_MINUTES` | - | `30` | ファイル検出時間制限（分、0以下で無制限） |
 
-### 4. KAMUI CODE のセットアップ
-`.mcp.json` を作成して KAMUI CODE記述 を追記
-
-
-### 5. プラットフォームごとのセットアップ
+### 4. プラットフォームごとのセットアップ
 
 #### Discord Bot の作成
 
@@ -213,6 +319,55 @@ FILE_DETECTION_MINUTES=30
 - `SLACK_PORT=3000`（または任意のポート）を設定
 - **Event Subscriptions** で Request URL を設定（例: `https://your-domain.com/slack/events`）
 
+#### LINE Bot の作成
+
+1. [LINE Developers](https://developers.line.biz/) にアクセス
+2. [LINE Official Account Manager](https://manager.line.biz/) で LINE Official Account を作成
+3. LINE Developers で **Provider** を選択し、新しい **Messaging API Channel** を作成
+4. **Messaging API** タブで:
+   - **Channel Access Token** を発行してコピー → `LINE_CHANNEL_ACCESS_TOKEN` に設定
+5. **Basic Settings** タブで:
+   - **Channel Secret** をコピー → `LINE_CHANNEL_SECRET` に設定
+6. **Webhook URL** の設定:
+   - **固定URL方式（推奨）**: Cloudflare Named Tunnel使用
+     ```bash
+     # Cloudflare Named Tunnel セットアップ
+     npm run tunnel:setup-named
+     # 固定URL取得: https://your-domain.com/webhook
+     ```
+   - **動的URL方式**: Quick Tunnel使用（開発用）
+     ```bash
+     npm run dev-full  # Bot + Tunnel 同時起動
+     ```
+7. **Webhook** を有効化し、URL設定を完了
+8. **Auto Reply** を無効化（LINE Official Account Manager内）
+
+**Named Tunnel セットアップ（推奨）:**
+```bash
+# 1. セットアップ実行
+npm run tunnel:setup-named
+
+# 2. 固定URLを取得
+# 例: https://linebot.yourdomain.com/webhook
+
+# 3. LINE Developers でWebhook URLに設定
+
+# 4. 環境変数設定（オプション）
+# .envに以下を追加してカスタマイズ可能：
+# TUNNEL_NAME=your-tunnel-name
+# TUNNEL_DOMAIN=your-domain.com
+
+# 5. 運用開始
+npm run dev:named    # Bot + Named Tunnel同時実行
+npm run tunnel:named # Named Tunnelのみ実行
+```
+
+**Named Tunnel の利点:**
+- ✅ **固定URL**: 再起動後もURLが変わらない
+- ✅ **SSL対応**: HTTPS自動提供
+- ✅ **高信頼性**: Cloudflareのエッジネットワーク使用
+- ✅ **本格運用対応**: 24/7稼働可能
+
 ## 🎯 使用方法
 
 ### Bot の起動
@@ -224,11 +379,20 @@ BOT_PLATFORM=discord npm start
 # Slack のみ  
 BOT_PLATFORM=slack npm start
 
-# 両プラットフォーム同時実行
+# LINE のみ
+BOT_PLATFORM=line npm start
+
+# Discord + Slack 同時実行
 BOT_PLATFORM=both npm start
+
+# 全プラットフォーム同時実行
+BOT_PLATFORM=all npm start
 
 # 開発時（ファイル監視）
 npm run dev
+
+# LINE + Named Tunnel 同時実行（推奨）
+npm run dev:named
 ```
 
 ### コマンド使用方法
@@ -287,6 +451,29 @@ npm run dev
 プログラミングについて教えて
 ```
 
+#### LINE での使用
+
+**1. 通常のメッセージ**: プレフィックス不要
+```
+こんにちは
+美しい桜の画像を生成して
+Pythonでhello worldを書いて
+音楽を生成して
+```
+
+**2. 特別なコマンド**:
+```
+/help または ヘルプ   - ヘルプを表示
+/reset または リセット - 会話履歴をリセット
+```
+
+**3. LINE固有の特徴**:
+- ✅ **Webhook対応**: リアルタイム応答
+- ✅ **固定URL**: Named Tunnel使用で安定運用
+- ✅ **署名検証**: セキュアな通信
+- ⚠️ **テキストのみ**: 現在はテキストメッセージのみ対応
+- ⚠️ **ファイル送信制限**: 生成されたファイルはローカル保存のみ
+
 #### マルチメディア生成例（全プラットフォーム共通）
 ```
 # 画像生成
@@ -316,11 +503,11 @@ create a 3D model of a chair
 
 ### システム構成
 ```
-Discord/Slack → BotManager → Platform Adapters → Claude Code SDK → MCP Servers
-                     ↓              ↓                ↓              ↓
-                Common Logic → Message Handler → Tool Execution → File Generation
-                     ↓              ↓                ↓              ↓
-                Error Handling → Timeout Control → Stream Response → Auto Upload
+Discord/Slack/LINE → BotManager → Platform Adapters → Claude Code SDK → MCP Servers
+                        ↓              ↓                ↓              ↓
+                   Common Logic → Message Handler → Tool Execution → File Generation
+                        ↓              ↓                ↓              ↓
+                   Error Handling → Timeout Control → Stream Response → Auto Upload
 ```
 
 ### ファイル構造
@@ -340,7 +527,8 @@ d-kcode/
 │   ├── adapters/            # プラットフォーム別実装
 │   │   ├── base-adapter.js  # 共通基底クラス・Claude統合
 │   │   ├── discord-adapter.js  # Discord.js v14実装
-│   │   └── slack-adapter.js    # Slack Bolt・Socket Mode実装
+│   │   ├── slack-adapter.js    # Slack Bolt・Socket Mode実装
+│   │   └── line-adapter.js     # LINE Messaging API・Webhook実装
 │   ├── handlers/            # 共通処理ハンドラー
 │   │   ├── message-handler.js  # プラットフォーム非依存メッセージ処理
 │   │   └── file-processor.js   # ファイル自動検出・管理
@@ -348,6 +536,11 @@ d-kcode/
 │   │   └── config.js        # 設定管理・環境変数統合
 │   └── utils/
 │       └── claude.js        # Claude Code SDK統合・MCP動的読み込み
+├── scripts/                 # LINE開発・トンネル管理スクリプト
+│   ├── setup-named-tunnel.js   # Cloudflare Named Tunnel自動セットアップ
+│   ├── run-named-tunnel.js     # Named Tunnel実行スクリプト
+│   ├── setup-tunnel.js         # Quick Tunnel設定スクリプト
+│   └── dev-with-tunnel.js      # Bot + Tunnel統合開発環境
 └── README.md               # このファイル
 ```
 
@@ -361,8 +554,9 @@ d-kcode/
 
 #### `adapters/` - プラットフォーム別実装
 - **base-adapter.js**: 共通基底クラス・Claude統合・ファイル処理
-- **discord-adapter.js**: Discord.js v14、スラッシュコマンド、25MB制限対応
-- **slack-adapter.js**: Slack Bolt、Socket Mode、1GB制限対応、接続エラー処理
+- **discord-adapter.js**: Discord.js v14、スラッシュコマンド、ボタンUI、25MB制限対応
+- **slack-adapter.js**: Slack Bolt、Socket Mode、スラッシュコマンド、1GB制限対応
+- **line-adapter.js**: LINE Messaging API、Webhook、署名検証対応
 
 #### `handlers/` - 共通処理ハンドラー
 - **message-handler.js**: プラットフォーム非依存のメッセージ正規化・処理
@@ -380,6 +574,24 @@ d-kcode/
 - Gemini、Fal.ai画像・動画・音楽・3D生成サーバー
 
 ## ⚙️ 詳細設定
+
+### 環境変数による設定管理
+
+本プロジェクトでは、すべてのハードコード値を環境変数として外部化し、柔軟な設定管理を実現しています：
+
+#### 設定カテゴリ
+- **プラットフォーム設定**: Discord、Slack、LINE の個別設定
+- **Tunnel設定**: Cloudflare Named Tunnel、LocalTunnel の設定
+- **タイムアウト管理**: 12種類の詳細なタイムアウト設定
+- **システムパス**: 一時ファイル、メディアファイルのパス管理
+- **処理制限**: メッセージ長、ログ出力、ファイルサイズの制限
+- **API設定**: 外部API エンドポイントの設定
+
+#### 主要な設定項目
+- **34個以上の環境変数**: きめ細かい動作制御が可能
+- **デフォルト値**: すべての設定にデフォルト値があり、最小限の設定で動作
+- **プラットフォーム別最適化**: 各プラットフォームの制限に合わせた設定
+- **開発/本番環境切り替え**: 環境に応じた設定切り替えが容易
 
 ### 利用可能なMCPサービス（20個）
 
@@ -482,10 +694,14 @@ LOG_LEVEL=debug BOT_PLATFORM=both npm start
 ### 主要依存関係
 ```json
 {
-  "discord.js": "^14.16.3",    // Discord API クライアント
-  "@slack/bolt": "^3.22.0",    // Slack Bot フレームワーク  
-  "dotenv": "^16.4.7",         // 環境変数管理
-  "acorn": "^8.15.0"           // JavaScript パーサー
+  "discord.js": "^14.16.3",        // Discord API クライアント
+  "@slack/bolt": "^3.17.1",       // Slack Bot フレームワーク
+  "@line/bot-sdk": "^10.0.0",     // LINE Messaging API SDK
+  "express": "^5.1.0",            // LINE Webhook サーバー
+  "dotenv": "^16.4.7",            // 環境変数管理
+  "acorn": "^8.15.0",             // JavaScript パーサー
+  "concurrently": "^7.6.0",      // 並行プロセス実行（開発用）
+  "localtunnel": "^2.0.2"        // Quick Tunnel（開発用）
 }
 ```
 
@@ -507,8 +723,15 @@ npm start
 
 # プラットフォーム指定起動
 BOT_PLATFORM=discord npm start
-BOT_PLATFORM=slack npm start  
-BOT_PLATFORM=both npm start
+BOT_PLATFORM=slack npm start
+BOT_PLATFORM=line npm start
+BOT_PLATFORM=both npm start    # Discord + Slack
+BOT_PLATFORM=all npm start     # 全プラットフォーム
+
+# LINE開発環境（Named Tunnel統合）
+npm run dev:named              # Bot + Named Tunnel同時実行
+npm run tunnel:named           # Named Tunnelのみ実行
+npm run tunnel:setup-named     # Named Tunnel初期セットアップ
 ```
 
 ### パフォーマンス最適化
@@ -518,6 +741,11 @@ BOT_PLATFORM=both npm start
 - **エラー処理**: タイムアウト・ネットワークエラーの自動リトライ
 - **キャッシュ**: Discord メッセージ分割による効率的送信
 - **プロセス管理**: 重複実行防止とクリーンアップ
+- **環境変数による最適化**: 
+  - 12種類のタイムアウト設定で細かな制御
+  - プラットフォーム別メッセージ長制限
+  - FFmpeg処理の最適化
+  - 一時ファイル管理の効率化
 
 ### セキュリティ
 - **環境変数管理**: `.env` ファイルでの機密情報保護

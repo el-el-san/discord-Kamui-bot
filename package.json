@@ -7,7 +7,17 @@
     "start": "node src/bot.js",
     "dev": "node --watch src/bot.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "echo \"No linter configured\""
+    "lint": "echo \"No linter configured\"",
+    "tunnel:cf": "cloudflared tunnel --url http://localhost:3000",
+    "tunnel:lt": "lt --port 3000",
+    "tunnel:setup": "node scripts/setup-tunnel.js",
+    "tunnel:setup-named": "node scripts/setup-named-tunnel.js",
+    "tunnel:named": "node scripts/run-named-tunnel.js",
+    "dev:named": "concurrently \"npm start\" \"npm run tunnel:named\"",
+    "tunnel:monitor": "node scripts/show-tunnel-url.js",
+    "tunnel:url": "node scripts/show-tunnel-url.js",
+    "dev-tunnel": "node scripts/dev-with-tunnel.js",
+    "dev-full": "node scripts/dev-with-tunnel.js"
   },
   "keywords": [
     "discord",
@@ -17,13 +27,21 @@
     "claude",
     "ai"
   ],
-  "author": "",
+  "author": "ERU",
   "license": "MIT",
   "dependencies": {
+    "@line/bot-sdk": "^10.0.0",
     "@slack/bolt": "^3.17.1",
     "acorn": "^8.15.0",
+    "axios": "^1.7.9",
     "discord.js": "^14.16.3",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "form-data": "^4.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "localtunnel": "^2.0.2"
   },
   "engines": {
     "node": ">=18.0.0"

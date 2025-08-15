@@ -16,9 +16,13 @@ async function main() {
     console.log(`  Platform: ${configSummary.platform}`);
     console.log(`  Discord: ${configSummary.discord.enabled ? '✅ Enabled' : '❌ Disabled'}`);
     console.log(`  Slack: ${configSummary.slack.enabled ? '✅ Enabled' : '❌ Disabled'}`);
+    console.log(`  LINE: ${configSummary.line.enabled ? '✅ Enabled' : '❌ Disabled'}`);
     
     if (configSummary.slack.enabled) {
       console.log(`  Slack Socket Mode: ${configSummary.slack.socketMode ? '✅ Yes' : '❌ No'}`);
+    }
+    if (configSummary.line.enabled) {
+      console.log(`  LINE Webhook Port: ${configSummary.line.webhookPort}`);
     }
     console.log('');
 
@@ -48,7 +52,8 @@ async function main() {
     console.log('🔗 Claude Code SDK の全機能が利用可能です');
 
     // メインプロセスを維持（イベントループを維持）
-    process.stdin.resume();
+    // nohupで実行時にstdinが利用できないため、setIntervalで代替
+    setInterval(() => {}, 1000);
 
   } catch (error) {
     console.error('❌ Failed to start Kamui Bot:', error);

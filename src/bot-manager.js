@@ -25,12 +25,20 @@ class BotManager {
         case 'slack':
           await this.initializeSlack();
           break;
+        case 'line':
+          await this.initializeLine();
+          break;
         case 'both':
           await this.initializeDiscord();
           await this.initializeSlack();
           break;
+        case 'all':
+          await this.initializeDiscord();
+          await this.initializeSlack();
+          await this.initializeLine();
+          break;
         default:
-          throw new Error(`Unsupported platform: ${platform}. Supported: 'discord', 'slack', 'both'`);
+          throw new Error(`Unsupported platform: ${platform}. Supported: 'discord', 'slack', 'line', 'both', 'all'`);
       }
 
       console.log(`✅ Bot Manager initialized with ${this.activeAdapters.length} adapter(s)`);
@@ -202,6 +210,31 @@ class BotManager {
   }
 
   /**
+   * LINE アダプター初期化
+   */
+  async initializeLine() {
+    try {
+      if (!config.line.channelAccessToken) {
+        console.warn('⚠️  LINE_CHANNEL_ACCESS_TOKEN not found. Skipping LINE initialization.');
+        return;
+      }
+
+      const LineBotAdapter = require('./adapters/line-adapter');
+      const lineAdapter = new LineBotAdapter(config);
+      
+      await lineAdapter.initialize();
+      
+      this.adapters.set('line', lineAdapter);
+      this.activeAdapters.push(lineAdapter);
+      
+      console.log('✅ LINE adapter initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize LINE adapter:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 設定情報を取得
    * @returns {Object} 設定の要約
    */
@@ -216,6 +249,11 @@ class BotManager {
         enabled: !!config.slack.botToken,
         socketMode: config.slack.socketMode,
         hasAppToken: !!config.slack.appToken
+      },
+      line: {
+        enabled: !!config.line.channelAccessToken,
+        hasChannelSecret: !!config.line.channelSecret,
+        webhookPort: config.line.webhookPort
       }
     };
   }

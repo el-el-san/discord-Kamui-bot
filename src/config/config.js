@@ -2,7 +2,7 @@ require('dotenv').config();
 
 module.exports = {
   // プラットフォーム選択
-  platform: process.env.BOT_PLATFORM || 'discord', // 'discord' or 'slack' or 'both'
+  platform: process.env.BOT_PLATFORM || 'discord', // 'discord', 'slack', 'line', or 'both'
   
   discord: {
     token: process.env.DISCORD_BOT_TOKEN,
@@ -10,7 +10,7 @@ module.exports = {
     prefix: process.env.DISCORD_PREFIX || '!',
     botName: process.env.DISCORD_BOT_NAME || 'Kamui',
     limits: {
-      messageLength: 2000,
+      messageLength: parseInt(process.env.MAX_MESSAGE_LENGTH_DISCORD) || 2000,
       fileSize: 25 * 1024 * 1024, // 25MB
       fileCount: 10
     }
@@ -21,7 +21,7 @@ module.exports = {
     appToken: process.env.SLACK_APP_TOKEN,
     signingSecret: process.env.SLACK_SIGNING_SECRET,
     socketMode: process.env.SLACK_SOCKET_MODE === 'true',
-    port: parseInt(process.env.SLACK_PORT) || 3000,
+    port: parseInt(process.env.SLACK_PORT) || parseInt(process.env.LINE_WEBHOOK_PORT) || 3000,
     botName: process.env.SLACK_BOT_NAME || 'Kamui',
     limits: {
       messageLength: 4000,
@@ -29,8 +29,21 @@ module.exports = {
       fileCount: 20
     }
   },
+  
+  line: {
+    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    channelSecret: process.env.LINE_CHANNEL_SECRET,
+    webhookPort: parseInt(process.env.LINE_WEBHOOK_PORT) || 3000,
+    publicUrl: process.env.LINE_PUBLIC_URL, // HTTPS公開URLを設定
+    botName: process.env.LINE_BOT_NAME || 'Kamui',
+    limits: {
+      messageLength: parseInt(process.env.MAX_MESSAGE_LENGTH_LINE) || 5000,
+      fileSize: 100 * 1024 * 1024, // 100MB
+      fileCount: 1
+    }
+  },
   claude: {
-    timeout: parseInt(process.env.CLAUDE_TIMEOUT) || 180000, // MCP処理用に3分に延長
+    timeout: parseInt(process.env.CLAUDE_TIMEOUT) || parseInt(process.env.MCP_TOOL_TIMEOUT) || 180000, // MCP処理用に3分に延長
     commandPath: 'claude',
     outputFormat: 'text',
     verbose: false,

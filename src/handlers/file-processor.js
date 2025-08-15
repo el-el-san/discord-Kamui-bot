@@ -11,8 +11,8 @@ class FileProcessor {
    * @returns {Array} ファイル情報の配列
    */
   static findRecentFiles(minutesAgo = null) {
-    // .envから設定を読み込み、未設定の場合は30分をデフォルトに
-    const defaultMinutes = process.env.FILE_DETECTION_MINUTES ? parseInt(process.env.FILE_DETECTION_MINUTES) : 30;
+    // .envから設定を読み込み、未設定の場合は2分をデフォルトに（より短い時間でより正確に）
+    const defaultMinutes = process.env.FILE_DETECTION_MINUTES ? parseInt(process.env.FILE_DETECTION_MINUTES) : 2;
     const actualMinutesAgo = minutesAgo !== null ? minutesAgo : defaultMinutes;
     try {
       const currentDir = process.cwd();
